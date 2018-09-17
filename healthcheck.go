@@ -35,6 +35,7 @@ func healtcheck(w http.ResponseWriter, req *http.Request) {
 				logrus.Error("Healtcheck failed: unable to reach Cattle")
 				http.Error(w, "Failed to connect to Cattle ", http.StatusInternalServerError)
 			}
+			logrus.Info("Healtcheck OK")
 			w.Write([]byte("OK"))
 		}
 	}

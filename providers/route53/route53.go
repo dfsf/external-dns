@@ -40,7 +40,17 @@ func (r *Route53Provider) Init(rootDomainName string) error {
 	// Comply with the API's 5 req/s rate limit. If there are other
 	// clients using the same account the AWS SDK will throttle the
 	// requests automatically if the global rate limit is exhausted.
-	r.limiter = ratelimit.NewBucketWithRate(5.0, 1)
+	route53RateLimit := 5.0
+	if envVal := os.Getenv("ROUTE53_RATE_LIMIT"); envVal != "" {
+		f, err := strconv.ParseFloat(envVal, 64)
+		if err == nil {
+			route53RateLimit = f
+		} else {
+			logrus.Warnf("Invalid value for ROUTE53_RATE_LIMIT. Using default")
+		}
+	}
+	logrus.Infof("Configured with rate limit of %f requests/second",route53RateLimit)
+	r.limiter = ratelimit.NewBucketWithRate(route53RateLimit, 1)
 
 	if envVal := os.Getenv("ROUTE53_MAX_RETRIES"); envVal != "" {
 		i, err := strconv.Atoi(envVal)

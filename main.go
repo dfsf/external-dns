@@ -140,6 +140,7 @@ func main() {
 			// allows us to check if the actual records have changed before
 			// querying the provider records.
 			if updateForced || !reflect.DeepEqual(metadataRecs, metadataRecsCached) {
+				logrus.Infof("Updating DNS: updateForced=%v", updateForced)
 				// update the provider
 				updatedRecords, err := UpdateProviderDnsRecords(metadataRecs)
 				if err != nil {

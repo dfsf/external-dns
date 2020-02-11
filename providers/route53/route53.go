@@ -144,9 +144,10 @@ func (*Route53Provider) GetName() string {
 }
 
 func (r *Route53Provider) HealthCheck() error {
-	var params *awsRoute53.GetHostedZoneCountInput
-	_, err := r.client.GetHostedZoneCount(params)
-	return err
+	// var params *awsRoute53.GetHostedZoneCountInput
+	// _, err := r.client.GetHostedZoneCount(params)
+	// return err
+	return nil
 }
 
 func (r *Route53Provider) AddRecord(record utils.DnsRecord) error {

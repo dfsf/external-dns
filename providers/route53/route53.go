@@ -40,7 +40,7 @@ func (r *Route53Provider) Init(rootDomainName string) error {
 	// Comply with the API's 5 req/s rate limit. If there are other
 	// clients using the same account the AWS SDK will throttle the
 	// requests automatically if the global rate limit is exhausted.
-	route53RateLimit := 5.0
+	route53RateLimit := 1.0
 	if envVal := os.Getenv("ROUTE53_RATE_LIMIT"); envVal != "" {
 		f, err := strconv.ParseFloat(envVal, 64)
 		if err == nil {

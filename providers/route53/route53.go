@@ -26,6 +26,7 @@ type Route53Provider struct {
 	client       *awsRoute53.Route53
 	hostedZoneId string
 	limiter      *ratelimit.Bucket
+	health	     error
 }
 
 func init() {
@@ -37,6 +38,8 @@ func init() {
 // 1) Environment variables: AWS_ACCESS_KEY, AWS_SECRET_KEY
 // 2) EC2 IAM role
 func (r *Route53Provider) Init(rootDomainName string) error {
+
+	r.health = nil 
 	// Comply with the API's 5 req/s rate limit. If there are other
 	// clients using the same account the AWS SDK will throttle the
 	// requests automatically if the global rate limit is exhausted.
@@ -74,12 +77,14 @@ func (r *Route53Provider) Init(rootDomainName string) error {
 
 	sess, err := session.NewSession(config)
 	if err != nil {
-		return fmt.Errorf("Failed to create Route53 session: %v", err)
+		r.health = fmt.Errorf("Failed to create Route53 session: %v", err)
+		return r.health
 	}
 
 	r.client = awsRoute53.New(sess)
 	if err := r.setHostedZone(rootDomainName); err != nil {
-		return fmt.Errorf("Failed to configure hosted zone: %v", err)
+		r.health = fmt.Errorf("Failed to configure hosted zone: %v", err)
+		return r.health
 	}
 
 	logrus.Infof("Configured %s with hosted zone %s",
@@ -89,9 +94,11 @@ func (r *Route53Provider) Init(rootDomainName string) error {
 }
 
 func (r *Route53Provider) setHostedZone(rootDomainName string) error {
+	r.health = nil 
 	if envVal := os.Getenv("ROUTE53_ZONE_ID"); envVal != "" {
 		r.hostedZoneId = strings.TrimSpace(envVal)
 		if err := r.validateHostedZoneId(rootDomainName); err != nil {
+			r.health = err 
 			return err
 		}
 		return nil
@@ -104,11 +111,13 @@ func (r *Route53Provider) setHostedZone(rootDomainName string) error {
 	}
 	resp, err := r.client.ListHostedZonesByName(params)
 	if err != nil {
-		return fmt.Errorf("Could not list hosted zones: %v", err)
+		r.health =  fmt.Errorf("Could not list hosted zones: %v", err)
+		return r.health 
 	}
 
 	if len(resp.HostedZones) == 0 || *resp.HostedZones[0].Name != rootDomainName {
-		return fmt.Errorf("Hosted zone for '%s' not found", rootDomainName)
+		r.health =  fmt.Errorf("Hosted zone for '%s' not found", rootDomainName)
+		return r.health 
 	}
 
 	zoneId := *resp.HostedZones[0].Id
@@ -147,7 +156,8 @@ func (r *Route53Provider) HealthCheck() error {
 	// var params *awsRoute53.GetHostedZoneCountInput
 	// _, err := r.client.GetHostedZoneCount(params)
 	// return err
-	return nil
+	logrus.Debugf("Not pestering Route53 and returning %s", r.health)
+	return r.health
 }
 
 func (r *Route53Provider) AddRecord(record utils.DnsRecord) error {
@@ -163,6 +173,7 @@ func (r *Route53Provider) RemoveRecord(record utils.DnsRecord) error {
 }
 
 func (r *Route53Provider) changeRecord(record utils.DnsRecord, action string) error {
+	r.health = nil 
 	r.limiter.Wait(1)
 	records := make([]*awsRoute53.ResourceRecord, len(record.Records))
 	for idx, value := range record.Records {
@@ -193,11 +204,13 @@ func (r *Route53Provider) changeRecord(record utils.DnsRecord, action string) er
 	}
 
 	_, err := r.client.ChangeResourceRecordSets(params)
+	r.health = err 
 	return err
 }
 
 func (r *Route53Provider) GetRecords() ([]utils.DnsRecord, error) {
 	r.limiter.Wait(1)
+	r.health = nil 
 	dnsRecords := []utils.DnsRecord{}
 	rrSets := []*awsRoute53.ResourceRecordSet{}
 	params := &awsRoute53.ListResourceRecordSetsInput{
@@ -214,6 +227,7 @@ func (r *Route53Provider) GetRecords() ([]utils.DnsRecord, error) {
 			return !lastPage
 		})
 	if err != nil {
+		r.health = fmt.Errorf("Route 53 API call has failed: %v", err)
 		return dnsRecords, fmt.Errorf("Route 53 API call has failed: %v", err)
 	}
 

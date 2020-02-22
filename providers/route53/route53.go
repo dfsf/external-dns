@@ -156,7 +156,7 @@ func (r *Route53Provider) HealthCheck() error {
 	// var params *awsRoute53.GetHostedZoneCountInput
 	// _, err := r.client.GetHostedZoneCount(params)
 	// return err
-	logrus.Debugf("Not pestering Route53 and returning %s", r.health)
+	logrus.Infof("Not pestering Route53 and returning %s", r.health)
 	return r.health
 }
 

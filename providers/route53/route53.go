@@ -99,7 +99,7 @@ func (r *Route53Provider) setHostedZone(rootDomainName string) error {
 		r.hostedZoneId = strings.TrimSpace(envVal)
 		if err := r.validateHostedZoneId(rootDomainName); err != nil {
 			r.health = err 
-			return err
+			return r.health
 		}
 		return nil
 	}
@@ -205,7 +205,7 @@ func (r *Route53Provider) changeRecord(record utils.DnsRecord, action string) er
 
 	_, err := r.client.ChangeResourceRecordSets(params)
 	r.health = err 
-	return err
+	return r.health
 }
 
 func (r *Route53Provider) GetRecords() ([]utils.DnsRecord, error) {
@@ -228,7 +228,7 @@ func (r *Route53Provider) GetRecords() ([]utils.DnsRecord, error) {
 		})
 	if err != nil {
 		r.health = fmt.Errorf("Route 53 API call has failed: %v", err)
-		return dnsRecords, fmt.Errorf("Route 53 API call has failed: %v", err)
+		return dnsRecords, r.health
 	}
 
 	for _, rrSet := range rrSets {

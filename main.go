@@ -147,6 +147,7 @@ func main() {
 					logrus.Errorf("Failed to update provider with new DNS records: %v", err)
 					goto sleep
 				}
+				logrus.Infof("Successfully Updated DNS: updateForced=%v", updateForced)
 
 				// update the service FQDN in Cattle
 				for _, mRec := range updatedRecords {

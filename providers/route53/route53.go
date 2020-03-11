@@ -215,7 +215,7 @@ func (r *Route53Provider) GetRecords() ([]utils.DnsRecord, error) {
 	rrSets := []*awsRoute53.ResourceRecordSet{}
 	params := &awsRoute53.ListResourceRecordSetsInput{
 		HostedZoneId: aws.String(r.hostedZoneId),
-		MaxItems:     aws.String("100"),
+		MaxItems:     aws.String("1500"),
 	}
 
 	err := r.client.ListResourceRecordSetsPages(params,
